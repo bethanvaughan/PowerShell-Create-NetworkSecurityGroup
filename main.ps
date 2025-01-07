@@ -1,0 +1,72 @@
+# Login to Azure if not already logged in
+if (-not (Get-AzContext)) {
+    Write-Host "You are not logged in. Logging you into Azure..." -ForegroundColor Yellow
+    Connect-AzAccount
+}
+
+# Prompt for resource group name
+Write-Host "Enter the name of the resource group:" -ForegroundColor Cyan
+$resourceGroupName = Read-Host "Resource Group Name"
+
+# Check if the resource group exists
+$resourceGroup = Get-AzResourceGroup -Name $resourceGroupName -ErrorAction SilentlyContinue
+if (-not $resourceGroup) {
+    Write-Host "Resource group '$resourceGroupName' does not exist. Do you want to create it? (y/n)" -ForegroundColor Yellow
+    $createRG = Read-Host "Your choice"
+
+    if ($createRG -eq 'y') {
+        $location = Read-Host "Enter the location (e.g., eastus)"
+        New-AzResourceGroup -Name $resourceGroupName -Location $location
+        Write-Host "Resource group '$resourceGroupName' created successfully." -ForegroundColor Green
+    } else {
+        Write-Host "Resource group creation canceled. Exiting script." -ForegroundColor Red
+        exit
+    }
+} else {
+    Write-Host "Resource group '$resourceGroupName' already exists." -ForegroundColor Green
+}
+
+# Prompt for NSG name
+Write-Host "Enter the name of the Network Security Group (NSG):" -ForegroundColor Cyan
+$nsgName = Read-Host "NSG Name"
+
+# Check if the NSG exists
+$nsg = Get-AzNetworkSecurityGroup -ResourceGroupName $resourceGroupName -Name $nsgName -ErrorAction SilentlyContinue
+if ($nsg) {
+    Write-Host "NSG '$nsgName' already exists in resource group '$resourceGroupName'." -ForegroundColor Green
+} else {
+    Write-Host "NSG '$nsgName' does not exist. Creating it now..." -ForegroundColor Yellow
+    $location = $resourceGroup.Location
+    New-AzNetworkSecurityGroup -Name $nsgName -ResourceGroupName $resourceGroupName -Location $location
+    Write-Host "NSG '$nsgName' created successfully." -ForegroundColor Green
+}
+
+# Prompt to add a security rule
+Write-Host "Do you want to add a security rule to the NSG? (y/n)" -ForegroundColor Cyan
+$addRule = Read-Host "Your choice"
+if ($addRule -eq 'y') {
+    $ruleName = Read-Host "Enter the name of the security rule"
+    $priority = Read-Host "Enter the priority for the rule (e.g., 100)"
+    $direction = Read-Host "Enter the direction (Inbound/Outbound)"
+    $protocol = Read-Host "Enter the protocol (Tcp/Udp/Any)"
+    $source = Read-Host "Enter the source address prefix (e.g., *)"
+    $sourcePort = Read-Host "Enter the source port range (e.g., *)"
+    $destination = Read-Host "Enter the destination address prefix (e.g., *)"
+    $destinationPort = Read-Host "Enter the destination port range (e.g., 80)"
+    $access = Read-Host "Enter the access type (Allow/Deny)"
+
+    New-AzNetworkSecurityRuleConfig -Name $ruleName `
+        -Priority $priority `
+        -Direction $direction `
+        -Protocol $protocol `
+        -SourceAddressPrefix $source `
+        -SourcePortRange $sourcePort `
+        -DestinationAddressPrefix $destination `
+        -DestinationPortRange $destinationPort `
+        -Access $access | `
+    Set-AzNetworkSecurityGroup -NetworkSecurityGroup $nsg
+
+    Write-Host "Security rule '$ruleName' added successfully." -ForegroundColor Green
+} else {
+    Write-Host "No security rule added. Exiting script." -ForegroundColor Yellow
+}
