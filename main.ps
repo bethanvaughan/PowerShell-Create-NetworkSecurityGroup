@@ -1,9 +1,3 @@
-# Login to Azure if not already logged in
-if (-not (Get-AzContext)) {
-    Write-Host "You are not logged in. Logging you into Azure..." -ForegroundColor Yellow
-    Connect-AzAccount
-}
-
 # Prompt for resource group name
 Write-Host "Enter the name of the resource group:" -ForegroundColor Cyan
 $resourceGroupName = Read-Host "Resource Group Name"
