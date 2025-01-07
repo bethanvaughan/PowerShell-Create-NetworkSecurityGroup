@@ -35,6 +35,29 @@ if ($nsg) {
     Write-Host "NSG '$nsgName' created successfully." -ForegroundColor Green
 }
 
+# Prompt to associate the NSG with a subnet
+Write-Host "Do you want to associate this NSG with a subnet? (y/n)" -ForegroundColor Cyan
+$associateSubnet = Read-Host "Your choice"
+if ($associateSubnet -eq 'y') {
+    Write-Host "Enter the name of the virtual network:" -ForegroundColor Cyan
+    $vnetName = Read-Host "Virtual Network Name"
+
+    Write-Host "Enter the name of the subnet:" -ForegroundColor Cyan
+    $subnetName = Read-Host "Subnet Name"
+
+    $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetName -VirtualNetworkName $vnetName -ResourceGroupName $resourceGroupName -ErrorAction SilentlyContinue
+
+    if (-not $subnet) {
+        Write-Host "Subnet '$subnetName' does not exist in virtual network '$vnetName'. Exiting." -ForegroundColor Red
+        exit
+    }
+
+    Set-AzVirtualNetworkSubnetConfig -VirtualNetworkName $vnetName -ResourceGroupName $resourceGroupName -Name $subnetName -AddressPrefix $subnet.AddressPrefix -NetworkSecurityGroupId $nsg.Id
+    Write-Host "NSG '$nsgName' associated with subnet '$subnetName' successfully." -ForegroundColor Green
+} else {
+    Write-Host "NSG not associated with any subnet. Exiting script." -ForegroundColor Yellow
+}
+
 # Prompt to add a security rule
 Write-Host "Do you want to add a security rule to the NSG? (y/n)" -ForegroundColor Cyan
 $addRule = Read-Host "Your choice"
